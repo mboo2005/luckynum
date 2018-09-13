@@ -3,8 +3,8 @@ pragma solidity ^0.4.24;
 
 contract LNEvents {
     // fired whenever a player registers a name
-    event OnBuy(uint8 resCode, uint256 roundId, uint256 timeStamp, uint256[2][] nums);
-    event OnWithdraw(uint8 resCode, uint256 roundId, uint256 timeStamp, uint256 ethOut);
+    event OnBuy(uint8 resCode, uint256 roundId, uint256 timeStamp, uint256[2][] nums, address playerAddress);
+    event OnWithdraw(uint8 resCode, uint256 roundId, uint256 timeStamp, uint256 ethOut, address playerAddress);
 }
 
 
@@ -77,7 +77,7 @@ contract LuckyNum is LuckyNumInterface, LNEvents {
     string constant public NAME = "Luckin LuckyNum";
     string constant public SYMBOL = "LNum";
     uint256 private constant NUM_COST = 1000000000000000; // 0.001 ether; 
-    uint256 private constant NUM_COUNT = 10000; //10 thousand nums
+    uint256 private constant NUM_COUNT = 1000; //10 thousand nums
     uint256 private constant ROUND_TIMESPAN = 30 seconds; //timespan between round
     uint256 private constant BENEFIAL = 2; //benefial percent
 
@@ -105,8 +105,8 @@ contract LuckyNum is LuckyNumInterface, LNEvents {
     bool public activated_ = false;
 
     function activate() 
-        isOwner()
         public
+        isOwner()
     {
         // only team just can activate 
         require(
@@ -151,7 +151,7 @@ contract LuckyNum is LuckyNumInterface, LNEvents {
             _buyCore();
         } else if (now.sub(rounds[rId].endTime) < ROUND_TIMESPAN) {
             uint256[2][] memory empty;
-            emit LNEvents.OnBuy(uint8(ResCode.BoughtFailForEnded), rId, now, empty);
+            emit LNEvents.OnBuy(uint8(ResCode.BoughtFailForEnded), rId, now, empty, msg.sender);
             revert();  //Not permitted to select num
         }else {
             _endRound();
@@ -172,9 +172,9 @@ contract LuckyNum is LuckyNumInterface, LNEvents {
             require(msg.sender.send(_eth));
             winPlayers[msg.sender] = winPlayers[msg.sender].sub(_eth);
             // fire withdraw event
-            emit LNEvents.OnWithdraw(uint8(ResCode.Success), rId, now, _eth);
+            emit LNEvents.OnWithdraw(uint8(ResCode.Success), rId, now, _eth, msg.sender);
         }else {
-            emit LNEvents.OnWithdraw(uint8(ResCode.WithdrawFail), rId, now, _eth);
+            emit LNEvents.OnWithdraw(uint8(ResCode.WithdrawFail), rId, now, _eth, msg.sender);
         }
     }
 
@@ -198,7 +198,7 @@ contract LuckyNum is LuckyNumInterface, LNEvents {
         rounds[rId].ended = false;
         rounds[rId].startTime = now;
         currentNum = 0;
-        betIndex=0;
+        betIndex = 0;
     }
 
     function _buyCore() private {
@@ -235,7 +235,7 @@ contract LuckyNum is LuckyNumInterface, LNEvents {
             rounds[rId].endTime = now;
             rounds[rId].blockNum = block.number;
         }
-        emit LNEvents.OnBuy(uint8(ResCode.Success), rId, now, rounds[rId].playerNums[msg.sender]);
+        emit LNEvents.OnBuy(uint8(ResCode.Success), rId, now, rounds[rId].playerNums[msg.sender], msg.sender);
     }
 
     function _getOpenNum(bytes32 openHash) private pure returns(uint256) {
